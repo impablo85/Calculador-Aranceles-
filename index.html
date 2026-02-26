@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora IOMA - Aranceles y Copagos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Calculadora IOMA</h1>
+            <p class="subtitle">Aranceles y Copagos</p>
+        </header>
+
+        <div class="content">
+            <div class="studies-container" id="studiesContainer">
+                <!-- Se generará dinámicamente con JavaScript -->
+            </div>
+
+            <div class="summary-card">
+                <h2>Resumen</h2>
+                <div class="summary-content">
+                    <div class="selected-studies" id="selectedStudies">
+                        <p class="empty-message">No hay estudios seleccionados</p>
+                    </div>
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span class="total-label">TOTAL:</span>
+                            <span class="total-amount" id="totalAmount">$0</span>
+                        </div>
+                        <div class="breakdown">
+                            <div class="breakdown-item">
+                                <span>Aranceles:</span>
+                                <span id="totalArancel">$0</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span>Copagos:</span>
+                                <span id="totalCopago">$0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="reset-btn" id="resetBtn">Limpiar todo</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Calculadora IOMA 2024</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
