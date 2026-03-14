@@ -411,6 +411,21 @@ function calculateTotals() {
         totalArancel += 28000;
     }
 
+    // ARANCEL MAMOGRAFÍA GRUPAL: $20.000 si hay al menos 1 mamografía
+    if (Object.keys(selectedStudies).some(id => estudios[id].tipoMamo)) {
+        totalArancel += 20000;
+    }
+
+    // ARANCEL DENSITOMETRÍA: $18.000 si hay al menos 1 densitometría
+    if (selectedStudies['densitometria']) {
+        totalArancel += 18000;
+    }
+
+    // ARANCEL ERGOMETRÍA: $20.000 si hay al menos 1 ergometría
+    if (selectedStudies['ergometria']) {
+        totalArancel += 20000;
+    }
+
     // Calcular aranceles y copagos por estudio
     Object.keys(selectedStudies).forEach(studyId => {
         const estudio = estudios[studyId];
@@ -448,8 +463,11 @@ function calculateTotals() {
             totalCopago += estudio.copago * qty;
         }
         
-        // Otros estudios (Densitometría, Ergometría, Resonancia, etc.)
-        if (!estudio.tipoRX && !estudio.tipoEco && !estudio.tipoDoppler && !estudio.tipoMamo) {
+        // Para estudios con arancelGrupal (Densitometría, Ergometría), solo sumar copagos
+        if (estudio.arancelGrupal) {
+            if (estudio.copago) totalCopago += estudio.copago * qty;
+        } else if (!estudio.tipoRX && !estudio.tipoEco && !estudio.tipoDoppler && !estudio.tipoMamo) {
+            // Para estudios sin arancel grupal (Resonancias, etc)
             if (estudio.arancel) totalArancel += estudio.arancel;
             if (estudio.copago) totalCopago += estudio.copago * qty;
         }
@@ -568,7 +586,11 @@ function getDetalleEstudio(studyId) {
         if (estudio.copago) copago = estudio.copago;
     } else if (estudio.tipoDoppler) {
         if (estudio.copago) copago = estudio.copago * qty;
+    } else if (estudio.arancelGrupal) {
+        // Para estudios con arancel grupal (Densitometría, Ergometría), solo copago
+        if (estudio.copago) copago = estudio.copago * qty;
     } else {
+        // Para estudios sin arancel grupal (Resonancias, etc)
         if (estudio.arancel) arancel = estudio.arancel;
         if (estudio.copago) copago = estudio.copago * qty;
     }
@@ -584,45 +606,61 @@ function renderDetalle() {
     const hasEco = Object.keys(selectedStudies).some(id => estudios[id].tipoEco);
     const hasDoppler = Object.keys(selectedStudies).some(id => estudios[id].tipoDoppler);
     const hasMamo = Object.keys(selectedStudies).some(id => estudios[id].tipoMamo);
+    const hasDensi = selectedStudies['densitometria'];
+    const hasErgo = selectedStudies['ergometria'];
     
-    let html = '<h3 class="font-bold text-gray-800 text-sm mb-3 border-b pb-2">Detalle por práctica</h3>';
+    let html = '<h3>Detalle por práctica</h3>';
     
     // Aranceles grupales
-    html += '<div class="space-y-2"><p class="font-semibold text-gray-700 text-xs">Aranceles Grupales:</p>';
+    html += '<div class="detalle-section"><p>Aranceles Grupales:</p>';
     
     if (countRX > 0) {
         const arancelRX = countRX === 1 ? 10000 : 15000;
-        html += `<div class="flex justify-between text-gray-600 pl-2">
+        html += `<div class="detalle-item">
             <span>• Rayos X (${countRX} estudios)</span>
-            <span class="font-semibold text-blue-600">$${arancelRX.toLocaleString('es-AR')}</span>
+            <span class="detalle-arancel">$${arancelRX.toLocaleString('es-AR')}</span>
         </div>`;
     }
     
     if (hasEco) {
-        html += `<div class="flex justify-between text-gray-600 pl-2">
+        html += `<div class="detalle-item">
             <span>• Ecografías</span>
-            <span class="font-semibold text-blue-600">$20.000</span>
+            <span class="detalle-arancel">$20.000</span>
         </div>`;
     }
     
     if (hasDoppler) {
-        html += `<div class="flex justify-between text-gray-600 pl-2">
+        html += `<div class="detalle-item">
             <span>• Eco Doppler</span>
-            <span class="font-semibold text-blue-600">$28.000</span>
+            <span class="detalle-arancel">$28.000</span>
         </div>`;
     }
     
     if (hasMamo) {
-        html += `<div class="flex justify-between text-gray-600 pl-2">
+        html += `<div class="detalle-item">
             <span>• Mamografía</span>
-            <span class="font-semibold text-blue-600">$20.000</span>
+            <span class="detalle-arancel">$20.000</span>
+        </div>`;
+    }
+    
+    if (hasDensi) {
+        html += `<div class="detalle-item">
+            <span>• Densitometría</span>
+            <span class="detalle-arancel">$18.000</span>
+        </div>`;
+    }
+    
+    if (hasErgo) {
+        html += `<div class="detalle-item">
+            <span>• Ergometría</span>
+            <span class="detalle-arancel">$20.000</span>
         </div>`;
     }
     
     html += '</div>';
     
     // Detalle por estudio
-    html += '<div class="space-y-2 pt-2 border-t"><p class="font-semibold text-gray-700 text-xs">Por estudio individual:</p>';
+    html += '<div class="detalle-section" style="padding-top: 0.5rem; border-top: 1px solid var(--border-color);"><p>Por estudio individual:</p>';
     
     Object.keys(selectedStudies).forEach(studyId => {
         const estudio = estudios[studyId];
@@ -631,23 +669,23 @@ function renderDetalle() {
         
         if (detalle.arancel === 0 && detalle.copago === 0) return;
         
-        html += `<div class="bg-white rounded p-2 space-y-1">
-            <div class="flex justify-between items-center">
-                <span class="font-semibold text-gray-700">${estudio.nombre} (x${qty})</span>
-                <span class="font-bold text-gray-800">$${detalle.total.toLocaleString('es-AR')}</span>
+        html += `<div class="detalle-estudio">
+            <div class="detalle-estudio-header">
+                <span class="detalle-estudio-nombre">${estudio.nombre} (x${qty})</span>
+                <span class="detalle-estudio-total">$${detalle.total.toLocaleString('es-AR')}</span>
             </div>`;
         
         if (detalle.arancel > 0) {
-            html += `<div class="flex justify-between text-gray-600 pl-2 text-xs">
+            html += `<div class="detalle-estudio-breakdown">
                 <span>Arancel:</span>
-                <span class="text-blue-600">$${detalle.arancel.toLocaleString('es-AR')}</span>
+                <span class="detalle-arancel">$${detalle.arancel.toLocaleString('es-AR')}</span>
             </div>`;
         }
         
         if (detalle.copago > 0) {
-            html += `<div class="flex justify-between text-gray-600 pl-2 text-xs">
+            html += `<div class="detalle-estudio-breakdown">
                 <span>Copago:</span>
-                <span class="text-green-600">$${detalle.copago.toLocaleString('es-AR')}</span>
+                <span class="detalle-copago">$${detalle.copago.toLocaleString('es-AR')}</span>
             </div>`;
         }
         
