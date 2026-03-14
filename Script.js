@@ -10,16 +10,16 @@ const estudios = {
     },
     'rx-otras': {
         nombre: 'Otras RX',
-        arancelBase: 1500,
-        arancelAdicional: 1000,
+        arancelPorExposicion: 1500, // Primera exposición
+        arancelAdicional: 1000, // Cada adicional
         categoria: 'Rayos X',
         tipoRX: true
     },
     
     // ECOGRAFÍAS
     'eco-tv': {
-        nombre: 'Eco TV',
-        arancel: 10000,
+        nombre: 'Eco TV (y no nomencladas)',
+        copago: 10000,
         categoria: 'Ecografías',
         tipoEco: true
     },
@@ -53,8 +53,8 @@ const estudios = {
     // MAMOGRAFÍA
     'mamo-bilateral': {
         nombre: 'Mamografía Bilateral',
-        arancel: 2000,
-        copago: 10000,
+        arancel: 0,
+        copago: 4000,
         categoria: 'Mamografía',
         tipoMamo: true,
         sinContador: true
@@ -69,6 +69,7 @@ const estudios = {
     },
     'mamo-tomosintesis': {
         nombre: 'Tomosíntesis',
+        arancel: 0,
         copago: 5000,
         categoria: 'Mamografía',
         tipoMamo: true,
@@ -80,7 +81,8 @@ const estudios = {
         nombre: 'Densitometría',
         arancel: 18000,
         copago: 5000,
-        categoria: 'Densitometría'
+        categoria: 'Densitometría',
+        arancelGrupal: true
     },
     
     // ERGOMETRÍA
@@ -88,7 +90,8 @@ const estudios = {
         nombre: 'Ergometría',
         arancel: 20000,
         copago: 5000,
-        categoria: 'Ergometría'
+        categoria: 'Ergometría',
+        arancelGrupal: true
     },
     
     // RESONANCIA MAGNÉTICA
@@ -153,12 +156,12 @@ const estudios = {
 };
 
 const categoriasMain = {
-    'Rayos X': { icon: '📷', estudios: ['rx-espinograma', 'rx-otras'] },
-    'Ecografías': { icon: '🔊', estudios: ['eco-tv', 'eco-abdominal', 'eco-otras'] },
-    'Eco Doppler': { icon: '💓', estudios: ['doppler-periferico', 'doppler-obstetrico'] },
-    'Mamografía': { icon: '🩺', estudios: ['mamo-bilateral', 'mamo-unilateral', 'mamo-tomosintesis'] },
-    'Densitometría': { icon: '🦴', estudios: ['densitometria'] },
-    'Ergometría': { icon: '❤️', estudios: ['ergometria'] },
+    'Rayos X': { icon: '📷', estudios: ['rx-espinograma', 'rx-otras'], arancelGrupal: '$10k (x1) / $15k (x2+)' },
+    'Ecografías': { icon: '🔊', estudios: ['eco-tv', 'eco-abdominal', 'eco-otras'], arancelGrupal: '$20k' },
+    'Eco Doppler': { icon: '💓', estudios: ['doppler-periferico', 'doppler-obstetrico'], arancelGrupal: '$28k' },
+    'Mamografía': { icon: '🩺', estudios: ['mamo-bilateral', 'mamo-unilateral', 'mamo-tomosintesis'], arancelGrupal: '$20k' },
+    'Densitometría': { icon: '🦴', estudios: ['densitometria'], arancelGrupal: '$18k' },
+    'Ergometría': { icon: '❤️', estudios: ['ergometria'], arancelGrupal: '$20k' },
     'Resonancia Magnética': { icon: '🧲', estudios: ['resonancia-sin-contraste', 'resonancia-con-contraste', 'resonancia-subsiguiente-sin', 'resonancia-subsiguiente-con'] }
 };
 
@@ -170,6 +173,7 @@ const categoriasExtra = {
 // Estado de la aplicación
 let selectedStudies = {};
 let showExtra = false;
+let showDetalle = false;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -220,7 +224,18 @@ function createCategoryElement(categoria, data) {
     const div = document.createElement('div');
     div.className = 'category';
     
-    const titleHTML = `<h2 class="category-title"><span class="icon">${data.icon}</span>${categoria}</h2>`;
+    const arancelGrupalHTML = data.arancelGrupal 
+        ? `<span style="font-size: 0.75rem; font-weight: 600; color: var(--primary-color);">Arancel: ${data.arancelGrupal}</span>`
+        : '';
+    
+    const titleHTML = `
+        <h2 class="category-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="icon">${data.icon}</span>${categoria}
+            </div>
+            ${arancelGrupalHTML}
+        </h2>
+    `;
     const gridHTML = createStudiesGrid(data.estudios);
     
     div.innerHTML = titleHTML + gridHTML;
@@ -256,13 +271,15 @@ function createStudyCard(studyId) {
         infoHTML = '<p class="price">Arancel: $1.5k + $1k c/u adic.</p>';
     } else if (estudio.tipoEco && estudio.arancel) {
         infoHTML = `<p class="price">Arancel: $${(estudio.arancel/1000)}k × cant.</p>`;
+    } else if (estudio.tipoEco && estudio.copago) {
+        infoHTML = `<p class="copago">Copago: $${(estudio.copago/1000)}k × cant.</p>`;
     } else if (estudio.tipoDoppler && estudio.copago) {
         infoHTML = `<p class="copago">Copago: $${(estudio.copago/1000).toFixed(1)}k × cant.</p>`;
     } else if (estudio.tipoMamo) {
-        if (estudio.arancel) {
+        if (estudio.arancel > 0) {
             infoHTML += `<p class="price">Arancel: $${(estudio.arancel/1000)}k</p>`;
         }
-        if (estudio.copago) {
+        if (estudio.copago > 0) {
             infoHTML += `<p class="copago">Copago: $${(estudio.copago/1000)}k</p>`;
         }
     } else {
@@ -365,44 +382,73 @@ function updateQuantity(studyId, change) {
 function calculateTotals() {
     let totalArancel = 0;
     let totalCopago = 0;
+    let countRX = 0;
+    let countEco = 0;
     let countDoppler = 0;
 
+    // Contar estudios por tipo
     Object.keys(selectedStudies).forEach(studyId => {
         const estudio = estudios[studyId];
         const qty = selectedStudies[studyId];
         
+        if (estudio.tipoRX) countRX += qty;
+        if (estudio.tipoEco) countEco += qty;
         if (estudio.tipoDoppler) countDoppler += qty;
     });
 
+    // ARANCEL RX GRUPAL: $10.000 si hay 1 RX, $15.000 si hay 2 o más
+    if (countRX > 0) {
+        totalArancel += countRX === 1 ? 10000 : 15000;
+    }
+
+    // ARANCEL ECO GRUPAL: $20.000 si hay al menos 1 eco
+    if (countEco > 0) {
+        totalArancel += 20000;
+    }
+
+    // ARANCEL DOPPLER GRUPAL: $28.000 si hay al menos 1 doppler
     if (countDoppler > 0) {
         totalArancel += 28000;
     }
 
+    // Calcular aranceles y copagos por estudio
     Object.keys(selectedStudies).forEach(studyId => {
         const estudio = estudios[studyId];
         const qty = selectedStudies[studyId];
         
+        // RX - Aranceles por exposición (ADEMÁS del arancel grupal)
         if (studyId === 'rx-otras') {
+            // $1.500 por la primera exposición + $1.000 por cada adicional
             totalArancel += qty === 1 ? 1500 : (1500 + (qty - 1) * 1000);
         }
         
+        // RX - Copagos
         if (studyId === 'rx-espinograma') {
             totalCopago += qty === 1 ? 10000 : 20000;
         }
         
-        if (estudio.tipoEco && estudio.arancel) {
-            totalArancel += estudio.arancel * qty;
+        // Ecografías - Aranceles y copagos por cantidad (ADEMÁS del arancel grupal)
+        if (estudio.tipoEco) {
+            if (estudio.arancel) {
+                totalArancel += estudio.arancel * qty;
+            }
+            if (estudio.copago) {
+                totalCopago += estudio.copago * qty;
+            }
         }
         
+        // Mamografías - Aranceles y copagos (una sola vez)
         if (estudio.tipoMamo) {
             if (estudio.arancel) totalArancel += estudio.arancel;
             if (estudio.copago) totalCopago += estudio.copago;
         }
         
+        // Doppler - Solo copagos (arancel grupal ya sumado arriba)
         if (estudio.tipoDoppler && estudio.copago) {
             totalCopago += estudio.copago * qty;
         }
         
+        // Otros estudios (Densitometría, Ergometría, Resonancia, etc.)
         if (!estudio.tipoRX && !estudio.tipoEco && !estudio.tipoDoppler && !estudio.tipoMamo) {
             if (estudio.arancel) totalArancel += estudio.arancel;
             if (estudio.copago) totalCopago += estudio.copago * qty;
@@ -425,6 +471,13 @@ function updateSummary() {
         totalAmountElement.textContent = '$0';
         totalArancelElement.textContent = '$0';
         totalCopagoElement.textContent = '$0';
+        
+        // Ocultar botón de detalle
+        const detalleBtn = document.getElementById('detalleBtn');
+        if (detalleBtn) detalleBtn.style.display = 'none';
+        const detalleContainer = document.getElementById('detalleContainer');
+        if (detalleContainer) detalleContainer.style.display = 'none';
+        
         return;
     }
     
@@ -452,6 +505,158 @@ function updateSummary() {
     totalAmountElement.textContent = `$${totals.total.toLocaleString('es-AR')}`;
     totalArancelElement.textContent = `$${totals.totalArancel.toLocaleString('es-AR')}`;
     totalCopagoElement.textContent = `$${totals.totalCopago.toLocaleString('es-AR')}`;
+    
+    // Mostrar botón de detalle
+    let detalleBtn = document.getElementById('detalleBtn');
+    if (!detalleBtn) {
+        detalleBtn = document.createElement('button');
+        detalleBtn.id = 'detalleBtn';
+        detalleBtn.className = 'w-full bg-blue-100 text-blue-700 py-2 rounded-lg font-semibold hover:bg-blue-200 active:scale-95 transition-all text-sm mb-3 flex items-center justify-center gap-2';
+        detalleBtn.innerHTML = '▼ Ver detalle por práctica';
+        detalleBtn.onclick = toggleDetalle;
+        
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.parentNode.insertBefore(detalleBtn, resetBtn);
+    }
+    detalleBtn.style.display = 'flex';
+    
+    // Actualizar contenido del detalle si está visible
+    if (showDetalle) {
+        renderDetalle();
+    }
+}
+
+function toggleDetalle() {
+    showDetalle = !showDetalle;
+    const detalleBtn = document.getElementById('detalleBtn');
+    detalleBtn.innerHTML = showDetalle ? '▲ Ocultar detalle' : '▼ Ver detalle por práctica';
+    
+    let detalleContainer = document.getElementById('detalleContainer');
+    
+    if (showDetalle) {
+        if (!detalleContainer) {
+            detalleContainer = document.createElement('div');
+            detalleContainer.id = 'detalleContainer';
+            detalleContainer.className = 'bg-gray-50 rounded-lg p-4 mb-3 text-xs space-y-3';
+            const detalleBtn = document.getElementById('detalleBtn');
+            detalleBtn.parentNode.insertBefore(detalleContainer, detalleBtn);
+        }
+        renderDetalle();
+        detalleContainer.style.display = 'block';
+    } else {
+        if (detalleContainer) {
+            detalleContainer.style.display = 'none';
+        }
+    }
+}
+
+function getDetalleEstudio(studyId) {
+    const estudio = estudios[studyId];
+    const qty = selectedStudies[studyId];
+    let arancel = 0;
+    let copago = 0;
+
+    if (studyId === 'rx-otras') {
+        arancel = qty === 1 ? 1500 : (1500 + (qty - 1) * 1000);
+    } else if (studyId === 'rx-espinograma') {
+        copago = qty === 1 ? 10000 : 20000;
+    } else if (estudio.tipoEco) {
+        if (estudio.arancel) arancel = estudio.arancel * qty;
+        if (estudio.copago) copago = estudio.copago * qty;
+    } else if (estudio.tipoMamo) {
+        if (estudio.arancel) arancel = estudio.arancel;
+        if (estudio.copago) copago = estudio.copago;
+    } else if (estudio.tipoDoppler) {
+        if (estudio.copago) copago = estudio.copago * qty;
+    } else {
+        if (estudio.arancel) arancel = estudio.arancel;
+        if (estudio.copago) copago = estudio.copago * qty;
+    }
+
+    return { arancel, copago, total: arancel + copago };
+}
+
+function renderDetalle() {
+    const detalleContainer = document.getElementById('detalleContainer');
+    if (!detalleContainer) return;
+    
+    const countRX = Object.keys(selectedStudies).filter(id => estudios[id].tipoRX).reduce((sum, id) => sum + selectedStudies[id], 0);
+    const hasEco = Object.keys(selectedStudies).some(id => estudios[id].tipoEco);
+    const hasDoppler = Object.keys(selectedStudies).some(id => estudios[id].tipoDoppler);
+    const hasMamo = Object.keys(selectedStudies).some(id => estudios[id].tipoMamo);
+    
+    let html = '<h3 class="font-bold text-gray-800 text-sm mb-3 border-b pb-2">Detalle por práctica</h3>';
+    
+    // Aranceles grupales
+    html += '<div class="space-y-2"><p class="font-semibold text-gray-700 text-xs">Aranceles Grupales:</p>';
+    
+    if (countRX > 0) {
+        const arancelRX = countRX === 1 ? 10000 : 15000;
+        html += `<div class="flex justify-between text-gray-600 pl-2">
+            <span>• Rayos X (${countRX} estudios)</span>
+            <span class="font-semibold text-blue-600">$${arancelRX.toLocaleString('es-AR')}</span>
+        </div>`;
+    }
+    
+    if (hasEco) {
+        html += `<div class="flex justify-between text-gray-600 pl-2">
+            <span>• Ecografías</span>
+            <span class="font-semibold text-blue-600">$20.000</span>
+        </div>`;
+    }
+    
+    if (hasDoppler) {
+        html += `<div class="flex justify-between text-gray-600 pl-2">
+            <span>• Eco Doppler</span>
+            <span class="font-semibold text-blue-600">$28.000</span>
+        </div>`;
+    }
+    
+    if (hasMamo) {
+        html += `<div class="flex justify-between text-gray-600 pl-2">
+            <span>• Mamografía</span>
+            <span class="font-semibold text-blue-600">$20.000</span>
+        </div>`;
+    }
+    
+    html += '</div>';
+    
+    // Detalle por estudio
+    html += '<div class="space-y-2 pt-2 border-t"><p class="font-semibold text-gray-700 text-xs">Por estudio individual:</p>';
+    
+    Object.keys(selectedStudies).forEach(studyId => {
+        const estudio = estudios[studyId];
+        const qty = selectedStudies[studyId];
+        const detalle = getDetalleEstudio(studyId);
+        
+        if (detalle.arancel === 0 && detalle.copago === 0) return;
+        
+        html += `<div class="bg-white rounded p-2 space-y-1">
+            <div class="flex justify-between items-center">
+                <span class="font-semibold text-gray-700">${estudio.nombre} (x${qty})</span>
+                <span class="font-bold text-gray-800">$${detalle.total.toLocaleString('es-AR')}</span>
+            </div>`;
+        
+        if (detalle.arancel > 0) {
+            html += `<div class="flex justify-between text-gray-600 pl-2 text-xs">
+                <span>Arancel:</span>
+                <span class="text-blue-600">$${detalle.arancel.toLocaleString('es-AR')}</span>
+            </div>`;
+        }
+        
+        if (detalle.copago > 0) {
+            html += `<div class="flex justify-between text-gray-600 pl-2 text-xs">
+                <span>Copago:</span>
+                <span class="text-green-600">$${detalle.copago.toLocaleString('es-AR')}</span>
+            </div>`;
+        }
+        
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    detalleContainer.innerHTML = html;
 }
 
 function resetAll() {
