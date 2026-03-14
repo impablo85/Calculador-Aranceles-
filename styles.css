@@ -466,3 +466,111 @@ footer p {
         transform: translateY(0);
     }
 }
+
+/* Estilos para botón y contenedor de detalle */
+#detalleBtn {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.15) 100%);
+    color: var(--primary-color);
+    border: 2px solid rgba(37, 99, 235, 0.2);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+#detalleBtn:hover {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border-color: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+#detalleBtn:active {
+    transform: scale(0.98);
+}
+
+#detalleContainer {
+    background: var(--background);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    animation: fadeIn 0.3s ease;
+}
+
+#detalleContainer h3 {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.detalle-section {
+    margin-bottom: 0.75rem;
+}
+
+.detalle-section p {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.detalle-item {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    padding-left: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.detalle-estudio {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.detalle-estudio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.detalle-estudio-nombre {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.detalle-estudio-total {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.detalle-estudio-breakdown {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.detalle-arancel {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.detalle-copago {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
